@@ -51,17 +51,33 @@ class File
 		if(stat.directory?)
 			dc = 0
 			fc = 0
+			images = []
 			begin
 				Dir.open(filename).each do |d|
-					if File.stat(File.join(filename, d)).directory? 
-						if(d[0] != '.'[0])
+					if(d[0] != '.'[0])
+						if File.stat(File.join(filename, d)).directory? 
 							dc += 1
+						else
+							fc += 1
+							if /.(jpg|gif|png|tif|svg|jpeg|tiff)$/ =~ d
+								images << d
+							end
 						end
-					else
-						fc += 1
 					end
 				end
-				if dc > 0 then "#{dc} #{if dc > 1 then "directories" else "directory" end}, " else "" end << "#{fc} files"
+				Amrita::SanitizedString.new [  # FIXME: this escaping is too simplistic
+					if dc > 0 
+						"#{dc} #{if dc > 1 then "directories" else "directory" end}," 
+					else 
+						"" 
+					end,
+					"#{fc} #{if fc > 1 then "files" else "file" end}",
+					if images.empty? 
+						"" 
+					else 
+						images.map { |i| "<img src='#{File.join(File.basename(filename), i)}!thumbnail(32,24)' alt='' title='#{i}' />" }.join(' ')
+					end
+				].join(' ')
 			rescue
 				'?'
 			end
