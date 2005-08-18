@@ -5,6 +5,7 @@ require 'logger'
 require 'amrita/template'
 require 'etc'
 require 'xattr'
+require 'RMagick'
 
 LOGGER = Logger.new(STDERR)
 
@@ -75,7 +76,7 @@ class File
 					if images.empty? 
 						"" 
 					else 
-						images.map { |i| "<img src='#{File.join(File.basename(filename), i)}!thumbnail(32,24)' alt='' title='#{i}' />" }.join(' ')
+						images.map { |i| "<img src='?thumbnail=#{File.join(File.basename(filename), i)}' alt='' title='#{i}' />" }.join(' ')
 					end
 				].join(' ')
 			rescue
@@ -87,8 +88,8 @@ class File
 	end
 end
 
-class Ambindextrous
-	attr_reader :out, :in, :template, :edittemplate, :query, :path, :systempath, :mode
+class FCGILet
+	attr_reader :out, :in, :query, :path, :docroot, :systempath, :mode
 	def initialize(req)
 		LOGGER.debug("got #{req}");
 		@docroot = req.env['DOCUMENT_ROOT']
@@ -101,17 +102,26 @@ class Ambindextrous
 			@path = req.env['REQUEST_URI'].split('?')[0].urldecode
 			LOGGER.debug("Path (stripping): #{path}")
 		end
-		
 		if @path =~ %r{/~([^/]+)}
 			LOGGER.debug("found user #{$1}, dir=#{Etc.getpwnam($1).dir}");
 			@docroot = File.join(Etc.getpwnam($1).dir, (if @host =~ /evil/: 'evil' else 'web' end))
 			@path.gsub! %r{/~([^/])+/}, '/'
 			LOGGER.debug("Path (userdir changed): #{path}")
 		end
-		
 		@systempath = File.join(@docroot, path)
 		LOGGER.debug("System path: #{systempath}")
 		
+		@out = req.out
+		@in = req.in
+		
+		@mode = req.env['REQUEST_METHOD']
+	end
+end
+
+class Ambindextrous < FCGILet
+	attr_reader :template, :edittemplate
+	def initialize(req)
+		super
 		if File.exists?(File.join(@docroot, '.ambindextrous.html'))
 			@templatefile = File.join(@docroot, '.ambindextrous.html')
 		elsif File.exists?(File.join(@docroot, 'ambindextrous.html'))
@@ -126,11 +136,6 @@ class Ambindextrous
 		else
 			@edittemplate = XMLTemplateFile.new('ambindextrous-edit.html')
 		end
-
-		@out = req.out
-		@in = req.in
-		
-		@mode = req.env['REQUEST_METHOD']
 	end
 
 	def run
@@ -222,8 +227,27 @@ class Ambindextrous
 	end
 end
 
+class Thumbnailer < FCGILet
+	def run
+		out << "Content-type: image/jpeg\n"
+		if query.match(/thumbnail=(.*)/)
+			file = File.join(systempath, $1)
+			img = Magick::Image.read(file).first
+			img.change_geometry!("32x24") { |cols, rows| img.thumbnail! cols, rows }
+			img.format = 'JPEG'
+			content = img.to_blob
+			out << "Content-Length: #{content.size}\n\n" 
+			out << content
+		end
+	end
+end
+
 FCGI.each do |fcgi|
-	Ambindextrous.new(fcgi).run
+	if /thumbnail/ =~ fcgi.env['QUERY_STRING']
+		Thumbnailer.new(fcgi).run
+	else
+		Ambindextrous.new(fcgi).run
+	end
 	fcgi.finish
 end
 	
