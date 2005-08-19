@@ -5,3 +5,4 @@
 - Handle _darcs, .svn, CVS and RCS directories specially 
   (git/monotone/arch, too?)
 - Abbreviate long filenames
+- handle spaces in image filenames properly (and other escaping issues)
