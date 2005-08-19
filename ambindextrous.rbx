@@ -62,7 +62,7 @@ class File
 							dc += 1
 						else
 							fc += 1
-							if /.(jpg|gif|png|tif|svg|jpeg|tiff)$/ =~ d
+							if /.(jpg|jpeg|gif|png|tif|tiff|svg)$/ =~ d
 								images << d
 							end
 						end
