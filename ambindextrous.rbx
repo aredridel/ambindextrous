@@ -260,7 +260,6 @@ class Thumbnailer < FCGILet
 	CacheDirs = [File.join(ENV['HOME'], '.thumbnails/tiny'), '/tmp/thumbnails/tiny']
 	def run
 		cacher = FreedesktopThumbnailCacher.new(CacheDirs)
-		out << "Content-type: image/png\n"
 		if query.match(/thumbnail=(.*)/)
 			file = File.join(systempath, $1)
 			content = cacher.cached(file) do
@@ -269,6 +268,7 @@ class Thumbnailer < FCGILet
 				img.format = 'PNG'
 				img.to_blob
 			end
+			out << "Content-type: image/png\n"
 			out << "Content-Length: #{content.size}\n\n" 
 			out << content
 		end
@@ -276,10 +276,15 @@ class Thumbnailer < FCGILet
 end
 
 FCGI.each do |fcgi|
-	if /thumbnail/ =~ fcgi.env['QUERY_STRING']
-		Thumbnailer.new(fcgi).run
-	else
-		Ambindextrous.new(fcgi).run
+	begin
+		if /thumbnail/ =~ fcgi.env['QUERY_STRING']
+			Thumbnailer.new(fcgi).run
+		else
+			Ambindextrous.new(fcgi).run
+		end
+	rescue
+		fcgi.out << "Status: 500\n"
+		fcgi.out << "Content-Length: 0\n\n"
 	end
 	fcgi.finish
 end
