@@ -1,0 +1,6 @@
+- Migrate to Amrita2
+- make directories show images at top, other files in table below (With 
+  Amrita2, if template supports it)
+- Read EXIF data
+- Handle _darcs, .svn, CVS and RCS directories specially 
+  (git/monotone/arch, too?)
