@@ -4,3 +4,4 @@
 - Read EXIF data
 - Handle _darcs, .svn, CVS and RCS directories specially 
   (git/monotone/arch, too?)
+- Abbreviate long filenames
