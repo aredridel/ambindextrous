@@ -235,8 +235,7 @@ class Cacher
 		end
 	end
 	def cached(file)
-		md5 = Digest::MD5.new(file).to_s
-		c = File.join(@cachedir, md5)
+		c = mangle(file)
 		if File.exist? c and File.stat(c).mtime >= File.stat(file).mtime
 			return File.read(c)
 		else
@@ -245,12 +244,22 @@ class Cacher
 			return content
 		end
 	end
+	def mangle(filename)
+		md5 = Digest::MD5.new(filename).to_s
+		File.join(@cachedir, md5)
+	end
+end
+
+class FreedesktopThumbnailCacher < Cacher
+	def mangle(filename)
+		super('file://' + filename) + '.png'
+	end
 end
 
 class Thumbnailer < FCGILet
-	CacheDirs = [File.join(ENV['HOME'], '.thumbnails/web'), '/tmp/thumbnails/web']
+	CacheDirs = [File.join(ENV['HOME'], '.thumbnails/tiny'), '/tmp/thumbnails/tiny']
 	def run
-		cacher = Cacher.new(CacheDirs)
+		cacher = FreedesktopThumbnailCacher.new(CacheDirs)
 		out << "Content-type: image/png\n"
 		if query.match(/thumbnail=(.*)/)
 			file = File.join(systempath, $1)
