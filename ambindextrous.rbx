@@ -6,6 +6,8 @@ require 'amrita/template'
 require 'etc'
 require 'xattr'
 require 'RMagick'
+require 'digest/md5'
+require 'fileutils'
 
 LOGGER = Logger.new(STDERR)
 
@@ -76,7 +78,10 @@ class File
 					if images.empty? 
 						"" 
 					else 
-						images.map { |i| "<img src='?thumbnail=#{File.join(File.basename(filename), i)}' alt='' title='#{i}' />" }.join(' ')
+						images.map { |i| 
+							f = File.join(File.basename(filename), i)
+							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='' title='#{i}' /></a>" 
+						}.join(' ')
 					end
 				].join(' ')
 			rescue
@@ -227,15 +232,45 @@ class Ambindextrous < FCGILet
 	end
 end
 
+class Cacher
+	def initialize(dirs)
+		@cachedir = dirs.find { |d| 
+			begin
+				d if (File.writable?(d) and File.directory?(d)) or FileUtils.mkdir_p(d)
+			rescue Errno::EACCES
+				false
+			end
+		}
+		if !@cachedir 
+			raise "Cannot create cache dir"
+		end
+	end
+	def cached(file)
+		md5 = Digest::MD5.new(file).to_s
+		c = File.join(@cachedir, md5)
+		if File.exist? c and File.stat(c).mtime >= File.stat(file).mtime
+			return File.read(c)
+		else
+			content = yield(file)
+			File.open(c, 'w') { |f| f.puts(content) }
+			return content
+		end
+	end
+end
+
 class Thumbnailer < FCGILet
+	CacheDirs = [File.join(ENV['HOME'], '.thumbnails/web'), '/tmp/thumbnails/web']
 	def run
-		out << "Content-type: image/jpeg\n"
+		cacher = Cacher.new(CacheDirs)
+		out << "Content-type: image/png\n"
 		if query.match(/thumbnail=(.*)/)
 			file = File.join(systempath, $1)
-			img = Magick::Image.read(file).first
-			img.change_geometry!("32x24") { |cols, rows| img.thumbnail! cols, rows }
-			img.format = 'JPEG'
-			content = img.to_blob
+			content = cacher.cached(file) do
+				img = Magick::Image.read(file).first
+				img.change_geometry!("32x24") { |cols, rows| img.thumbnail! cols, rows }
+				img.format = 'PNG'
+				img.to_blob
+			end
 			out << "Content-Length: #{content.size}\n\n" 
 			out << content
 		end
