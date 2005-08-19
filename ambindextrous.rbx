@@ -96,25 +96,19 @@ end
 class FCGILet
 	attr_reader :out, :in, :query, :path, :docroot, :systempath, :mode
 	def initialize(req)
-		LOGGER.debug("got #{req}");
 		@docroot = req.env['DOCUMENT_ROOT']
 		@query = req.env['QUERY_STRING']
 		@host = req.env['HTTP_HOST']
 		if(query.empty?)
 			@path = req.env['REQUEST_URI'].urldecode
-			LOGGER.debug("Path (no stripping): #{path}")
 		else
 			@path = req.env['REQUEST_URI'].split('?')[0].urldecode
-			LOGGER.debug("Path (stripping): #{path}")
 		end
 		if @path =~ %r{/~([^/]+)}
-			LOGGER.debug("found user #{$1}, dir=#{Etc.getpwnam($1).dir}");
 			@docroot = File.join(Etc.getpwnam($1).dir, (if @host =~ /evil/: 'evil' else 'web' end))
 			@path.gsub! %r{/~([^/])+/}, '/'
-			LOGGER.debug("Path (userdir changed): #{path}")
 		end
 		@systempath = File.join(@docroot, path)
-		LOGGER.debug("System path: #{systempath}")
 		
 		@out = req.out
 		@in = req.in
@@ -134,7 +128,6 @@ class Ambindextrous < FCGILet
 		else
 			@templatefile = 'ambindextrous.html'
 		end
-		LOGGER.debug("using template #{@templatefile}")
 		@template = XMLTemplateFile.new(@templatefile)
 		if File.exists?(File.join(@docroot, 'ambindextrous-edit.html'))
 			@edittemplate = XMLTemplateFile.new(File.join(@docroot, 'ambindextrous-edit.html'))
@@ -144,7 +137,6 @@ class Ambindextrous < FCGILet
 	end
 
 	def run
-		LOGGER.debug('Running')
 		if(mode == 'POST')
 			save_feedback
 		else
@@ -199,7 +191,6 @@ class Ambindextrous < FCGILet
 
 				next if !File.readable? File.join(systempath, e)
 				
-				LOGGER.debug("Listing #{systempath}/#{e}")
 				s = File.stat(qp = File.join(systempath, e))
 				extension = ''
 
@@ -220,14 +211,12 @@ class Ambindextrous < FCGILet
 					:time => s.mtime.strftime('%e %b %y'), 
 					:size => File.contentsize(qp)
 				} 
-				LOGGER.debug(entry.inspect)
 				data[:entries] << entry unless e[0..0] == '.' 
 			rescue Exception => x
 				LOGGER.debug x
 			end
 		end
 		data[:entries].sort! { |x,y| x[:path] <=> y[:path] }
-		#LOGGER.debug("Data: #{data.inspect}")
 		template.expand out, data
 	end
 end
