@@ -171,7 +171,8 @@ class Ambindextrous < FCGILet
 	def show_listing
 		data = Hash.new
 		data[:path] = path
-		data[:entries] = Array.new
+		data[:images] = []
+		data[:entries] = []
 
 		begin
 			a = File.get_attr systempath, 'feedback'
@@ -190,6 +191,7 @@ class Ambindextrous < FCGILet
 			begin 
 
 				next if !File.readable? File.join(systempath, e)
+				next if e[0] == ?.
 				
 				s = File.stat(qp = File.join(systempath, e))
 				extension = ''
@@ -211,12 +213,19 @@ class Ambindextrous < FCGILet
 					:time => s.mtime.strftime('%e %b %y'), 
 					:size => File.contentsize(qp)
 				} 
-				data[:entries] << entry unless e[0..0] == '.' 
+				if /[.](jpg|gif|png|svg)/ =~ e
+					entry[:thumbnail] = '?thumbnail=' + e.urlencode
+					data[:images] << entry unless e[0] == ?.
+				else
+					data[:entries] << entry unless e[0] == ?.
+				end
 			rescue Exception => x
 				LOGGER.debug x
 			end
 		end
+		data[:images].sort! { |x,y| x[:path] <=> y[:path] }
 		data[:entries].sort! { |x,y| x[:path] <=> y[:path] }
+		LOGGER.debug { data[:images].inspect }
 		template.expand out, data
 	end
 end
@@ -258,27 +267,35 @@ end
 
 class Thumbnailer < FCGILet
 	CacheDirs = [File.join(ENV['HOME'], '.thumbnails/tiny'), '/tmp/thumbnails/tiny']
-	def run
+	attr_accessor :size
+	attr_accessor :format
+	def initialize(fcgi, size)
+		self.size = size
+		self.format = 'PNG'
+		super(fcgi)
+	end
+
+	def run(image)
 		cacher = FreedesktopThumbnailCacher.new(CacheDirs)
-		if query.match(/thumbnail=(.*)/)
-			file = File.join(systempath, $1)
-			content = cacher.cached(file) do
-				img = Magick::Image.read(file).first
-				img.change_geometry!("32x24") { |cols, rows| img.thumbnail! cols, rows }
-				img.format = 'PNG'
-				img.to_blob
-			end
-			out << "Content-type: image/png\n"
-			out << "Content-Length: #{content.size}\n\n" 
-			out << content
+		file = File.join(systempath, image)
+		content = cacher.cached(file) do
+			img = Magick::Image.read(file).first
+			img.change_geometry!(size) { |cols, rows| img.thumbnail! cols, rows }
+			img.format = format.upcase
+			img.to_blob
 		end
+		out << "Content-type: image/#{format.downcase}\n"
+		out << "Content-Length: #{content.size}\n\n" 
+		out << content
 	end
 end
 
 FCGI.each do |fcgi|
 	begin
-		if /thumbnail/ =~ fcgi.env['QUERY_STRING']
-			Thumbnailer.new(fcgi).run
+		if /thumbnail=(.*)/ =~ fcgi.env['QUERY_STRING']
+			Thumbnailer.new(fcgi, '32x24').run($1)
+		elsif /size=(.*)&resize=(.*)/ =~ fcgi.env['QUERY_STRING']
+			Thumbnailer.new(fcgi, $1).run($2)
 		else
 			Ambindextrous.new(fcgi).run
 		end
