@@ -126,7 +126,7 @@ class Ambindextrous < FCGILet
 		elsif File.exists?(File.join(@docroot, 'ambindextrous.html'))
 			@templatefile = File.join(@docroot, 'ambindextrous.html')
 		else
-			@templatefile = 'ambindextrous.html'
+			@templatefile = File.join(File.dirname(__FILE__), 'ambindextrous.html')
 		end
 		@template = XMLTemplateFile.new(@templatefile)
 		if File.exists?(File.join(@docroot, 'ambindextrous-edit.html'))
@@ -134,6 +134,7 @@ class Ambindextrous < FCGILet
 		else
 			@edittemplate = XMLTemplateFile.new('ambindextrous-edit.html')
 		end
+		@images = if File.read(@templatefile).grep(/amrita:id=.images./): true  else false end
 	end
 
 	def run
@@ -215,13 +216,16 @@ class Ambindextrous < FCGILet
 				} 
 				if /[.](jpg|gif|png|svg)/ =~ e
 					entry[:thumbnail] = '?thumbnail=' + e.urlencode
-					data[:images] << entry unless e[0] == ?.
+					data[:images] << entry
 				else
-					data[:entries] << entry unless e[0] == ?.
+					data[:entries] << entry
 				end
 			rescue Exception => x
 				LOGGER.debug x
 			end
+		end
+		if !@images 
+			data[:entries] += data[:images]
 		end
 		data[:images].sort! { |x,y| x[:path] <=> y[:path] }
 		data[:entries].sort! { |x,y| x[:path] <=> y[:path] }
