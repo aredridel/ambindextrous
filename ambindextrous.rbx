@@ -80,7 +80,7 @@ class File
 					else 
 						images.map { |i| 
 							f = File.join(File.basename(filename), i)
-							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='' title='#{i}' /></a>" 
+							"<a href='#{f}'><img src='/global-site-overlay/thumbnailer.rbx/128x128/#{f}' alt='' title='#{i}' /></a>" 
 						}.join(' ')
 					end
 				].join(' ')
@@ -94,47 +94,48 @@ class File
 end
 
 class FCGILet
-	attr_reader :out, :in, :query, :path, :docroot, :systempath, :mode
+	attr_accessor :out, :in, :query, :path, :docroot, :systempath, :mode, :host, :url
 	def initialize(req)
-		@docroot = req.env['DOCUMENT_ROOT']
-		@query = req.env['QUERY_STRING']
-		@host = req.env['HTTP_HOST']
+		self.docroot = req.env['DOCUMENT_ROOT']
+		self.query = req.env['QUERY_STRING']
+		self.host = req.env['HTTP_HOST']
+		self.url = "http://#{host}/#{req.env['REQUEST_URI']}"
 		if(query.empty?)
-			@path = req.env['REQUEST_URI'].urldecode
+			self.path = req.env['REQUEST_URI'].urldecode
 		else
-			@path = req.env['REQUEST_URI'].split('?')[0].urldecode
+			self.path = req.env['REQUEST_URI'].split('?')[0].urldecode
 		end
-		if @path =~ %r{/~([^/]+)}
-			@docroot = File.join(Etc.getpwnam($1).dir, (if @host =~ /evil/: 'evil' else 'web' end))
-			@path.gsub! %r{/~([^/])+/}, '/'
+		if path =~ %r{/~([^/]+)}
+			self.docroot = File.join(Etc.getpwnam($1).dir, (if host =~ /evil/: 'evil' else 'web' end))
+			path.gsub! %r{/~([^/])+/}, '/'
 		end
-		@systempath = File.join(@docroot, path)
+		self.systempath = File.join(docroot, path)
 		
-		@out = req.out
-		@in = req.in
+		self.out = req.out
+		self.in = req.in
 		
-		@mode = req.env['REQUEST_METHOD']
+		self.mode = req.env['REQUEST_METHOD']
 	end
 end
 
 class Ambindextrous < FCGILet
-	attr_reader :template, :edittemplate
+	attr_accessor :template, :edittemplate, :do_images
 	def initialize(req)
 		super
-		if File.exists?(File.join(@docroot, '.ambindextrous.html'))
-			@templatefile = File.join(@docroot, '.ambindextrous.html')
-		elsif File.exists?(File.join(@docroot, 'ambindextrous.html'))
-			@templatefile = File.join(@docroot, 'ambindextrous.html')
+		if File.exists?(File.join(docroot, '.ambindextrous.html'))
+			templatefile = File.join(docroot, '.ambindextrous.html')
+		elsif File.exists?(File.join(docroot, 'ambindextrous.html'))
+			templatefile = File.join(docroot, 'ambindextrous.html')
 		else
-			@templatefile = File.join(File.dirname(__FILE__), 'ambindextrous.html')
+			templatefile = File.join(File.dirname(__FILE__), 'ambindextrous.html')
 		end
-		@template = XMLTemplateFile.new(@templatefile)
-		if File.exists?(File.join(@docroot, 'ambindextrous-edit.html'))
-			@edittemplate = XMLTemplateFile.new(File.join(@docroot, 'ambindextrous-edit.html'))
+		self.template = XMLTemplateFile.new(templatefile)
+		if File.exists?(File.join(docroot, 'ambindextrous-edit.html'))
+			self.edittemplate = XMLTemplateFile.new(File.join(docroot, 'ambindextrous-edit.html'))
 		else
-			@edittemplate = XMLTemplateFile.new('ambindextrous-edit.html')
+			self.edittemplate = XMLTemplateFile.new('ambindextrous-edit.html')
 		end
-		@images = if File.read(@templatefile).grep(/amrita:id=.images./): true  else false end
+		self.do_images = if File.read(templatefile).grep(/amrita:id=.images./): true  else false end
 	end
 
 	def run
@@ -151,7 +152,7 @@ class Ambindextrous < FCGILet
 	end
 
 	def save_feedback
-		param_data = @in.read(@in.size)
+		param_data = self.in.read(self.in.size)
 		param_data = param_data.split('&').map {|e| e.split('=')}
 		params = Hash.new { |h,k| h[k] = param_data.assoc(k)[1] }
 		if params['text']
@@ -224,7 +225,7 @@ class Ambindextrous < FCGILet
 				LOGGER.debug x
 			end
 		end
-		if !@images 
+		if !do_images 
 			data[:entries] += data[:images]
 		end
 		data[:images].sort! { |x,y| x[:path] <=> y[:path] }
@@ -235,15 +236,16 @@ class Ambindextrous < FCGILet
 end
 
 class Cacher
+	attr_accessor :cachedir
 	def initialize(dirs)
-		@cachedir = dirs.find { |d| 
+		self.cachedir = dirs.find { |d| 
 			begin
 				d if (File.writable?(d) and File.directory?(d)) or FileUtils.mkdir_p(d)
 			rescue Errno::EACCES
 				false
 			end
 		}
-		if !@cachedir 
+		if !cachedir 
 			raise "Cannot create cache dir"
 		end
 	end
@@ -259,7 +261,7 @@ class Cacher
 	end
 	def mangle(filename)
 		md5 = Digest::MD5.new(filename).to_s
-		File.join(@cachedir, md5)
+		File.join(cachedir, md5)
 	end
 end
 
