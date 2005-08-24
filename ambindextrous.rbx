@@ -80,7 +80,7 @@ class File
 					else 
 						images.map { |i| 
 							f = File.join(File.basename(filename), i)
-							"<a href='#{f}'><img src='/global-site-overlay/thumbnailer.rbx/128x128/#{f}' alt='' title='#{i}' /></a>" 
+							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='' title='#{i}' /></a>" 
 						}.join(' ')
 					end
 				].join(' ')
