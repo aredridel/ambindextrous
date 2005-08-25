@@ -1,5 +1,7 @@
 #! /usr/bin/ruby
 
+$:.unshift File.join(File.dirname(__FILE__), 'lib')
+
 require 'fcgi'
 require 'logger'
 require 'amrita/template'
@@ -8,6 +10,8 @@ require 'xattr'
 require 'RMagick'
 require 'digest/md5'
 require 'fileutils'
+require 'uri'
+require 'cgi/pathmap'
 
 LOGGER = Logger.new(STDERR)
 
@@ -80,7 +84,7 @@ class File
 					else 
 						images.map { |i| 
 							f = File.join(File.basename(filename), i)
-							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='' title='#{i}' /></a>" 
+							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='#{i}' title='#{i}' /></a>" 
 						}.join(' ')
 					end
 				].join(' ')
@@ -94,22 +98,20 @@ class File
 end
 
 class FCGILet
-	attr_accessor :out, :in, :query, :path, :docroot, :systempath, :mode, :host, :url
+	attr_accessor :out, :in, :docroot, :systempath, :mode, :url
+	def query
+		url.query
+	end
+	def host
+		url.host
+	end
+	def path
+		url.path
+	end
 	def initialize(req)
-		self.docroot = req.env['DOCUMENT_ROOT']
-		self.query = req.env['QUERY_STRING']
-		self.host = req.env['HTTP_HOST']
-		self.url = "http://#{host}/#{req.env['REQUEST_URI']}"
-		if(query.empty?)
-			self.path = req.env['REQUEST_URI'].urldecode
-		else
-			self.path = req.env['REQUEST_URI'].split('?')[0].urldecode
-		end
-		if path =~ %r{/~([^/]+)}
-			self.docroot = File.join(Etc.getpwnam($1).dir, (if host =~ /evil/: 'evil' else 'web' end))
-			path.gsub! %r{/~([^/])+/}, '/'
-		end
-		self.systempath = File.join(docroot, path)
+		self.docroot = req.docroot
+		self.url = req.selfurl
+		self.systempath = req.path_translated
 		
 		self.out = req.out
 		self.in = req.in
@@ -216,7 +218,7 @@ class Ambindextrous < FCGILet
 					:size => File.contentsize(qp)
 				} 
 				if /[.](jpg|gif|png|svg)/ =~ e
-					entry[:thumbnail] = '?thumbnail=' + e.urlencode
+					entry[:thumbnail] = '/global-site-overlay/thumbnailer.rbx/128x128' + File.join(File.dirname(self.url.path), e.urlencode)
 					data[:images] << entry
 				else
 					data[:entries] << entry
@@ -305,9 +307,10 @@ FCGI.each do |fcgi|
 		else
 			Ambindextrous.new(fcgi).run
 		end
-	rescue
+	rescue Exception => e
 		fcgi.out << "Status: 500\n"
-		fcgi.out << "Content-Length: 0\n\n"
+		fcgi.out << "Content-type: text/plain\n\n"
+		fcgi.out << "#{e}: #{e.backtrace.join("\n")}"
 	end
 	fcgi.finish
 end
