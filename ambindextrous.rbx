@@ -5,7 +5,6 @@ $:.unshift File.join(File.dirname(__FILE__), 'lib')
 require 'fcgi'
 require 'logger'
 require 'amrita/template'
-require 'etc'
 require 'xattr'
 require 'RMagick'
 require 'digest/md5'
@@ -23,18 +22,6 @@ class XMLTemplateFile < Amrita::TemplateFile
 		self.expand_attr = true
 		self.amrita_id = 'amrita:id'
 		self.use_compiler = true
-	end
-end
-
-class String
-	def urldecode
-		self.gsub(/%([A-Fa-f0-9]{2})/) {|s| [$1.hex].pack("C") }
-	end
-	def formdecode
-		self.gsub('+', ' ').urldecode
-	end
-	def urlencode
-		self.gsub('%', '%25').gsub(' ', '%20').gsub('?', '%3F')
 	end
 end
 
@@ -218,7 +205,7 @@ class Ambindextrous < FCGILet
 					:size => File.contentsize(qp)
 				} 
 				if /[.](jpg|gif|png|svg)/ =~ e
-					entry[:thumbnail] = '/global-site-overlay/thumbnailer.rbx/128x128' + File.join(File.dirname(self.url.path), e.urlencode)
+					entry[:thumbnail] = '/global-site-overlay/thumbnailer.rbx/128x128' + File.join(self.url.path, e.urlencode)
 					data[:images] << entry
 				else
 					data[:entries] << entry

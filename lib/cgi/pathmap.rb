@@ -1,4 +1,18 @@
 require 'uri'
+require 'etc'
+
+class String
+	def urldecode
+		self.gsub(/%([A-Fa-f0-9]{2})/) {|s| [$1.hex].pack("C") }
+	end
+	def formdecode
+		self.gsub('+', ' ').urldecode
+	end
+	def urlencode
+		self.gsub('%', '%25').gsub(' ', '%20').gsub('?', '%3F')
+	end
+end
+
 
 module WebDevHelper
 	def docroot
