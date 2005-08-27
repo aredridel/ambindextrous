@@ -1,3 +1,4 @@
+require 'cgi'
 require 'uri'
 require 'etc'
 
@@ -32,6 +33,7 @@ module WebDevHelper
 		if path.nil?
 			path = selfurl.path
 		end
+		path = CGI.unescape(path)
 		path = path.gsub  %r{^/~([^/])+/}, '/'
 		File.join(docroot, path)
 	end
