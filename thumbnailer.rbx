@@ -28,4 +28,5 @@ FCGI.each do |fcgi|
 		fcgi.out << "Content-type: text/plain\n\nError #{e}"
 	end
 	fcgi.finish
+	GC.start
 end
