@@ -8,3 +8,4 @@
 - Add caching headers to thumbnails
 - Split thumbnailer service entirely
 - Use service location to find thumbnailer
+- Scale images with correct relative sizes (needs ruby-epeg support)
