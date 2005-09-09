@@ -6,6 +6,7 @@ require 'RMagick'
 require 'cgi'
 require 'fcgi'
 require 'cgi/pathmap'
+require 'cacher/freedesktopthumbnailer'
 
 format = 'JPEG'
 
@@ -18,10 +19,8 @@ FCGI.each do |fcgi|
 		image = image.split('/')[2..-1].join('/')
 		file = fcgi.path_translated('/' + image)
 		STDERR.puts(file)
-		img = Magick::Image.read(file).first
-		img.change_geometry!(size) { |cols, rows| img.thumbnail! cols, rows }
-		img.format = format.upcase
-		content = img.to_blob
+		cacher = FreedesktopThumbnailer.new(size)
+		content = cacher.thumbnail(file, format) 
 		fcgi.out << "Content-type: image/#{format.downcase}\n"
 		fcgi.out << "Content-Length: #{content.size}\n\n"
 		fcgi.out << content

@@ -8,9 +8,9 @@ require 'amrita/template'
 require 'xattr'
 require 'RMagick'
 require 'digest/md5'
-require 'fileutils'
 require 'uri'
 require 'cgi/pathmap'
+require 'cacher/freedesktopthumbnailer'
 
 LOGGER = Logger.new(STDERR)
 
@@ -224,44 +224,7 @@ class Ambindextrous < FCGILet
 	end
 end
 
-class Cacher
-	attr_accessor :cachedir
-	def initialize(dirs)
-		self.cachedir = dirs.find { |d| 
-			begin
-				d if (File.writable?(d) and File.directory?(d)) or FileUtils.mkdir_p(d)
-			rescue Errno::EACCES
-				false
-			end
-		}
-		if !cachedir 
-			raise "Cannot create cache dir"
-		end
-	end
-	def cached(file)
-		c = mangle(file)
-		if File.exist? c and File.stat(c).mtime >= File.stat(file).mtime
-			return File.read(c)
-		else
-			content = yield(file)
-			File.open(c, 'w') { |f| f.puts(content) }
-			return content
-		end
-	end
-	def mangle(filename)
-		md5 = Digest::MD5.new(filename).to_s
-		File.join(cachedir, md5)
-	end
-end
-
-class FreedesktopThumbnailCacher < Cacher
-	def mangle(filename)
-		super('file://' + filename) + '.png'
-	end
-end
-
 class Thumbnailer < FCGILet
-	CacheDirs = [File.join(ENV['HOME'], '.thumbnails/tiny'), '/tmp/thumbnails/tiny']
 	attr_accessor :size
 	attr_accessor :format
 	def initialize(fcgi, size)
@@ -271,14 +234,9 @@ class Thumbnailer < FCGILet
 	end
 
 	def run(image)
-		cacher = FreedesktopThumbnailCacher.new(CacheDirs)
+		cacher = FreedesktopThumbnailer.new(size)
 		file = File.join(systempath, image)
-		content = cacher.cached(file) do
-			img = Magick::Image.read(file).first
-			img.change_geometry!(size) { |cols, rows| img.thumbnail! cols, rows }
-			img.format = format.upcase
-			img.to_blob
-		end
+		content = cacher.thumbnail(file, format)
 		out << "Content-type: image/#{format.downcase}\n"
 		out << "Content-Length: #{content.size}\n\n" 
 		out << content
