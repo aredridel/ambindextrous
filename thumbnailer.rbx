@@ -2,13 +2,10 @@
 
 $:.unshift File.join(File.dirname(__FILE__), 'lib')
 
-require 'RMagick'
 require 'cgi'
 require 'fcgi'
 require 'cgi/pathmap'
-require 'cacher/freedesktopthumbnailer'
-
-format = 'JPEG'
+require 'cacher/webthumbnailer'
 
 FCGI.each do |fcgi|
 	begin
@@ -19,9 +16,9 @@ FCGI.each do |fcgi|
 		image = image.split('/')[2..-1].join('/')
 		file = fcgi.path_translated('/' + image)
 		STDERR.puts(file)
-		cacher = FreedesktopThumbnailer.new(size)
-		content = cacher.thumbnail(file, format) 
-		fcgi.out << "Content-type: image/#{format.downcase}\n"
+		cacher = WebThumbnailer.new(size)
+		content = cacher.thumbnail(file) 
+		fcgi.out << "Content-type: image/jpeg\n"
 		fcgi.out << "Content-Length: #{content.size}\n\n"
 		fcgi.out << content
 	rescue Exception => e

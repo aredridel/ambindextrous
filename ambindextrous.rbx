@@ -10,7 +10,7 @@ require 'RMagick'
 require 'digest/md5'
 require 'uri'
 require 'cgi/pathmap'
-require 'cacher/freedesktopthumbnailer'
+require 'cacher/webthumbnailer'
 
 LOGGER = Logger.new(STDERR)
 
@@ -226,18 +226,16 @@ end
 
 class Thumbnailer < FCGILet
 	attr_accessor :size
-	attr_accessor :format
 	def initialize(fcgi, size)
 		self.size = size
-		self.format = 'PNG'
 		super(fcgi)
 	end
 
 	def run(image)
-		cacher = FreedesktopThumbnailer.new(size)
+		cacher = WebThumbnailer.new(size)
 		file = File.join(systempath, image)
-		content = cacher.thumbnail(file, format)
-		out << "Content-type: image/#{format.downcase}\n"
+		content = cacher.thumbnail(file)
+		out << "Content-type: image/jpeg\n"
 		out << "Content-Length: #{content.size}\n\n" 
 		out << content
 	end
