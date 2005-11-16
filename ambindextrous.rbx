@@ -110,13 +110,18 @@ class Ambindextrous < FCGILet
 	attr_accessor :template, :edittemplate, :do_images
 	def initialize(req)
 		super
-		if File.exists?(File.join(docroot, '.ambindextrous.html'))
-			templatefile = File.join(docroot, '.ambindextrous.html')
-		elsif File.exists?(File.join(docroot, 'ambindextrous.html'))
-			templatefile = File.join(docroot, 'ambindextrous.html')
+		LOGGER.debug("systempath = #{systempath}")
+		LOGGER.debug("docroot = #{docroot}")
+		if File.directory? systempath
+			dir = systempath
 		else
-			templatefile = File.join(File.dirname(__FILE__), 'ambindextrous.html')
+			dir = File.dirname(systempath)
 		end
+		paths = [dir, docroot, File.dirname(__FILE__)]
+		files = ['.ambindextrous.html', 'ambindextrous.html']
+		templatefile = paths.map { |e| files.map { |f| File.join(e, f) } }.flatten.select { |e| LOGGER.debug("Seeking #{e}."); t = File.exists? e; if t: LOGGER.debug('found'); end; t }.first
+
+		LOGGER.debug("templatefile = #{templatefile}")
 		self.template = XMLTemplateFile.new(templatefile)
 		if File.exists?(File.join(docroot, 'ambindextrous-edit.html'))
 			self.edittemplate = XMLTemplateFile.new(File.join(docroot, 'ambindextrous-edit.html'))
