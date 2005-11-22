@@ -2,7 +2,7 @@
 
 require 'test/unit'
 
-class TestDMD < Test::Unit::TestCase
+class TestMyProject < Test::Unit::TestCase
 
 	def test1
 	end
