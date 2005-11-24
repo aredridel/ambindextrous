@@ -12,7 +12,7 @@ task :predist => [:chmod, :changelog, :doc]
 desc "Run all the tests"
 Rake::TestTask.new do |t|
   t.libs << "test"
-  t.test_files = FileList['test_*.rb']
+  t.test_files = FileList['tests/test_*.rb']
   t.verbose = true
 end
 
