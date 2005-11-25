@@ -34,7 +34,7 @@ class WebThumbnailer < Cacher
 		cached(file) do
 			e = Epeg.new(file)
 			ox,oy = e.size
-			scale = [1.0 / (ox / x), 1.0 / (oy / y)].min
+			scale = [1.0 / [(ox / x), 1].max, 1.0 / [(oy / y), 1].max].min
 			dx = (ox * scale).floor
 			dy = (oy * scale).floor
 			e.set_output_size(dx,dy)
