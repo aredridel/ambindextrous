@@ -9,3 +9,4 @@
 - Split thumbnailer service entirely
 - Use service location to find thumbnailer
 - Resume handling non-jpeg thumbnails
+- Write installation instructions
