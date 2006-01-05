@@ -15,7 +15,6 @@ FCGI.each do |fcgi|
 		size = image.split('/')[1]
 		image = image.split('/')[2..-1].join('/')
 		file = fcgi.path_translated('/' + image)
-		STDERR.puts(file)
 		cacher = WebThumbnailer.new(size)
 		content = cacher.thumbnail(file) 
 		fcgi.out << "Content-type: image/jpeg\n"

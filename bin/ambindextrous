@@ -11,7 +11,7 @@ require 'uri'
 require 'cgi/pathmap'
 require 'cacher/webthumbnailer'
 
-LOGGER = Logger.new(STDERR)
+LOGGER = Logger.new('/tmp/log')
 
 class XMLTemplateFile < Amrita::TemplateFile
 	def initialize(file)
@@ -198,6 +198,8 @@ class Ambindextrous < FCGILet
 						e = e[(0..(-extension.length - 1))]
 					end
 				end
+
+				LOGGER.debug e.inspect
 
 				entry = {
 					:pathurl => Amrita::SanitizedString.new(e.urlencode),
