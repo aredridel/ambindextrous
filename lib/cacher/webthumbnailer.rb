@@ -1,5 +1,6 @@
 require 'cacher'
 require 'epeg'
+require 'RMagick'
 
 class WebThumbnailer < Cacher
 	SIZES = {
@@ -32,13 +33,23 @@ class WebThumbnailer < Cacher
 
 	def thumbnail(file)
 		cached(file) do
-			e = Epeg.new(file)
-			ox,oy = e.size
-			scale = [1.0 / [(ox / x), 1].max, 1.0 / [(oy / y), 1].max].min
-			dx = (ox * scale).floor
-			dy = (oy * scale).floor
-			e.set_output_size(dx,dy)
-			e.finish
+			jpeg = File.open(file) do |f|
+				f.read(4) == 'JFIF'
+			end
+			if jpeg	
+				e = Epeg.new(file)
+				ox,oy = e.size
+				scale = [1.0 / [(ox / x), 1].max, 1.0 / [(oy / y), 1].max].min
+				dx = (ox * scale).floor
+				dy = (oy * scale).floor
+				e.set_output_size(dx,dy)
+				e.finish
+			else
+				img = Magick::Image.read(file).first
+				img.change_geometry!("#{x}x#{y}") { |cols, rows| img.thumbnail! cols, rows }
+				img.format = 'JPEG'
+				img.to_blob
+			end
 		end
 	end
 end
