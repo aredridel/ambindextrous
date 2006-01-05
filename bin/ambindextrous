@@ -192,8 +192,8 @@ class Ambindextrous < FCGILet
 				extension = ''
 
 				if match = /([.][a-z0-9]+)$/i.match(e)
-					$stderr.puts "Chopping extension from #{e}"
-					if ['html', 'png', 'jpg', 'gif', 'swf', 'mp3', 'ogg'].include? match[1]
+					LOGGER.debug "Chopping extension from #{e}"
+					if ['html', 'png', 'jpg', 'jpeg', 'gif', 'swf', 'mp3', 'ogg'].include? match[1]
 						extension = match[1]
 						e = e[(0..(-extension.length - 1))]
 					end
@@ -210,8 +210,8 @@ class Ambindextrous < FCGILet
 					:time => s.mtime.strftime('%e %b %y'), 
 					:size => File.contentsize(qp)
 				} 
-				if /[.](jpg|gif|png|svg)/ =~ e
-					entry[:thumbnail] = '/global-site-overlay/thumbnailer.rbx/128x128' + File.join(self.url.path, e.urlencode)
+				if /[.](jpg|jpeg|gif|png|svg)/ =~ e
+					entry[:thumbnail] = '/global-site-overlay/ambindextrous/bin/thumbnailer/128x128' + File.join(self.url.path, e.urlencode)
 					data[:images] << entry
 				else
 					data[:entries] << entry
