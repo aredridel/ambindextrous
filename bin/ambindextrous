@@ -13,6 +13,12 @@ require 'cacher/webthumbnailer'
 
 LOGGER = Logger.new('/tmp/log')
 
+class String
+	def urldecode
+		gsub(/%([0-F]{2})/) { $1.to_i(16).chr }
+	end
+end
+
 class XMLTemplateFile < Amrita::TemplateFile
 	def initialize(file)
 		super(file)
@@ -92,7 +98,7 @@ class FCGILet
 		url.host
 	end
 	def path
-		url.path
+		url.path.urldecode
 	end
 	def initialize(req)
 		self.docroot = req.docroot
@@ -117,7 +123,7 @@ class Ambindextrous < FCGILet
 		else
 			dir = File.dirname(systempath)
 		end
-		paths = [dir, docroot, File.dirname(__FILE__)]
+		paths = [dir, docroot, File.join(File.dirname(__FILE__), '..')]
 		files = ['.ambindextrous.html', 'ambindextrous.html']
 		templatefile = paths.map { |e| files.map { |f| File.join(e, f) } }.flatten.select { |e| LOGGER.debug("Seeking #{e}."); t = File.exists? e; if t: LOGGER.debug('found'); end; t }.first
 
@@ -250,9 +256,9 @@ end
 FCGI.each do |fcgi|
 	begin
 		if /thumbnail=(.*)/ =~ fcgi.env['QUERY_STRING']
-			Thumbnailer.new(fcgi, '32x24').run($1)
+			Thumbnailer.new(fcgi, '32x24').run($1.urldecode)
 		elsif /size=(.*)&resize=(.*)/ =~ fcgi.env['QUERY_STRING']
-			Thumbnailer.new(fcgi, $1).run($2)
+			Thumbnailer.new(fcgi, $1).run($2.urldecode)
 		else
 			Ambindextrous.new(fcgi).run
 		end
