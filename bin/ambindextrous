@@ -50,7 +50,6 @@ class File
 		if(stat.directory?)
 			dc = 0
 			fc = 0
-			images = []
 			begin
 				Dir.open(filename).each do |d|
 					if(d[0] != '.'[0])
@@ -58,9 +57,6 @@ class File
 							dc += 1
 						else
 							fc += 1
-							if /.(jpg|jpeg|gif|png|tif|tiff|svg)$/i =~ d
-								images << d
-							end
 						end
 					end
 				end
@@ -70,7 +66,29 @@ class File
 					else 
 						"" 
 					end,
-					"#{fc} #{if fc > 1 then "files" else "file" end}",
+					"#{fc} #{if fc > 1 then "files" else "file" end}"
+				].join(' ')
+			rescue
+				'?'
+			end
+		else
+			stat.size.as_filesize
+		end
+	end
+
+	def self.images(filename)
+		stat = File.stat(filename)
+		images = []
+		if(stat.directory?)
+			begin
+				Dir.open(filename).each do |d|
+					if(d[0] != '.'[0])
+						if /.(jpg|jpeg|gif|png|tif|tiff|svg)$/i =~ d
+							images << d
+						end
+					end
+				end
+				Amrita::SanitizedString.new [
 					if images.empty? 
 						"" 
 					else 
@@ -85,7 +103,7 @@ class File
 				'?'
 			end
 		else
-			stat.size.as_filesize
+			''
 		end
 	end
 end
@@ -212,7 +230,8 @@ class Ambindextrous < FCGILet
 					:pathurl => Amrita::SanitizedString.new(e.urlencode),
 					:path => e, 
 					:extension => extension,
-					:description => (File.get_attr(qp, 'description') rescue ''), 
+					:description => (File.get_attr(qp, 'description') rescue ''),
+					:images => (File.images(qp) rescue ''), 
 					:type => if s.directory? then '/' else '' end, 
 					:time => s.mtime.strftime('%e %b %y'), 
 					:size => File.contentsize(qp)
