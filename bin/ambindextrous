@@ -76,6 +76,7 @@ class File
 					else 
 						images.map { |i| 
 							f = File.join(File.basename(filename), i)
+							# FIXME: proper URL escaping
 							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='#{i}' title='#{i}' /></a>" 
 						}.join(' ')
 					end
