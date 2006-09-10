@@ -287,13 +287,7 @@ end
 
 FCGI.each do |fcgi|
 	begin
-		if /thumbnail=(.*)/ =~ fcgi.env['QUERY_STRING']
-			Thumbnailer.new(fcgi, '32x24').run($1.urldecode)
-		elsif /size=(.*)&resize=(.*)/ =~ fcgi.env['QUERY_STRING']
-			Thumbnailer.new(fcgi, $1).run($2.urldecode)
-		else
-			Ambindextrous.new(fcgi).run
-		end
+		Ambindextrous.new(fcgi).run
 	rescue Exception => e
 		fcgi.out << "Status: 500\n"
 		fcgi.out << "Content-type: text/plain\n\n"
