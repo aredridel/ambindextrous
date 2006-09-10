@@ -80,32 +80,20 @@ class File
 		stat = File.stat(filename)
 		LOGGER.debug { "Finding images in #{filename}" }
 		images = []
-		if(stat.directory?)
-			begin
-				Dir.open(filename).each do |d|
-					if(d[0] != '.'[0])
-						if /.(jpg|jpeg|gif|png|tif|tiff|svg)$/i =~ d
-							images << d
-						end
+		begin
+			Dir.open(filename).each do |d|
+				if(d[0] != '.'[0])
+					if /.(jpg|jpeg|gif|png|tif|tiff|svg)$/i =~ d
+						images << d
 					end
 				end
-				Amrita::SanitizedString.new [
-					if images.empty? 
-						"" 
-					else 
-						images.map { |i| 
-							f = File.join(File.basename(filename), i)
-							# FIXME: proper URL escaping
-							"<a href='#{f}'><img src='?thumbnail=#{f}' alt='#{i}' title='#{i}' /></a>" 
-						}.join(' ')
-					end
-				].join(' ')
-			rescue
-				'?'
 			end
-		else
-			''
+		rescue
+			LOGGER.error { "Error reading directory #{filename}, #{$!.class}, #{$!.message}" }
+			[]
 		end
+		LOGGER.debug { "Found images #{images.inspect}" }
+		images
 	end
 end
 
@@ -240,8 +228,8 @@ class Ambindextrous < FCGILet
 					:pathurl => Amrita::SanitizedString.new(e.urlencode),
 					:path => e, 
 					:extension => extension,
-					:description => (File.get_attr(qp, 'description') rescue ''),
-					:images => (File.images(qp) rescue ''), 
+					:description => (log_errors { File.get_attr(qp, 'description') } rescue ''),
+					:images => (log_errors { make_thumburls(File.images(qp), e) } rescue ""), 
 					:type => if s.directory? then '/' else '' end, 
 					:time => s.mtime.strftime('%e %b %y'), 
 					:size => File.contentsize(qp)
@@ -263,6 +251,20 @@ class Ambindextrous < FCGILet
 		data[:entries].sort! { |x,y| x[:path] <=> y[:path] }
 		LOGGER.debug { data[:images].inspect }
 		template.expand out, data
+	end
+
+	def make_thumburls(images, e)
+		Amrita::SanitizedString.new(
+			if images.empty? 
+				"" 
+			else 
+				images.map { |i| 
+					#f = File.join(File.basename(filename), i)
+					# FIXME: proper URL escaping
+					"<a href='#{File.join(e, i)}'><img src='#{File.join('/global-site-overlay/ambindextrous/bin/thumbnailer/32x24', self.url.path, e, i)}' alt='#{i}' title='#{i}' /></a>" 
+				}.join(' ')
+			end
+		)
 	end
 end
 
