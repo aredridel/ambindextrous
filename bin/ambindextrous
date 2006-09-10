@@ -11,7 +11,7 @@ require 'uri'
 require 'cgi/pathmap'
 require 'cacher/webthumbnailer'
 
-LOGGER = Logger.new('/tmp/log')
+LOGGER = Logger.new('/dev/null')
 
 class String
 	def urldecode
