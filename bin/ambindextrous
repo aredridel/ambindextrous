@@ -289,11 +289,16 @@ FCGI.each do |fcgi|
 	begin
 		Ambindextrous.new(fcgi).run
 	rescue Exception => e
-		fcgi.out << "Status: 500\n"
-		fcgi.out << "Content-type: text/plain\n\n"
-		fcgi.out << "#{e}: #{e.backtrace.join("\n")}"
+		begin
+			fcgi.out << "Status: 500\n"
+			fcgi.out << "Content-type: text/plain\n\n"
+			fcgi.out << "#{e}: #{e.backtrace.join("\n")}"
+		rescue Exception => e
+			fcgi.finish
+		end
+	ensure
+		fcgi.finish
 	end
-	fcgi.finish
 end
 	
 # vim: syntax=ruby
