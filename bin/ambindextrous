@@ -296,7 +296,7 @@ FCGI.each do |fcgi|
 		begin
 			fcgi.out << "Status: 500\n"
 			fcgi.out << "Content-type: text/plain\n\n"
-			fcgi.out << "#{e}: #{e.backtrace.join("\n")}"
+			fcgi.out << "#{e} (#{e.class.name}): #{e.backtrace.join("\n")}"
 		rescue Exception => e
 			fcgi.finish
 		end
