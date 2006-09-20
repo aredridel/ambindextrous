@@ -196,12 +196,16 @@ class Ambindextrous < FCGILet
 			a = File.get_attr systempath, 'feedback'
 		rescue Errno::EOPNOTSUPP => e
 			a = ''
+		rescue Errno::EPERM => e
+			a = ''
 		end
 
 		data[:feedback] = Amrita::SanitizedString.new(a.gsub("(.*)\n", '<p>\1</p>')) if a
 		begin
 			a = File.get_attr systempath, 'description'
 		rescue Errno::EOPNOTSUPP => e
+			a = ''
+		rescue Errno::EPERM => e
 			a = ''
 		end
 		data[:description] = Amrita::SanitizedString.new(a.gsub("\n", "<br />")) if a
