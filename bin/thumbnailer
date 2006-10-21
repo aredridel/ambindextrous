@@ -6,6 +6,7 @@ require 'cgi'
 require 'fcgi'
 require 'cgi/pathmap'
 require 'cacher/webthumbnailer'
+require 'time'
 
 FCGI.each do |fcgi|
 	begin
@@ -15,9 +16,11 @@ FCGI.each do |fcgi|
 		size = image.split('/')[1]
 		image = image.split('/')[2..-1].join('/')
 		file = fcgi.path_translated('/' + image)
+		stat = File.stat(file)
 		cacher = WebThumbnailer.new(size)
 		content = cacher.thumbnail(file) 
 		fcgi.out << "Content-type: image/jpeg\n"
+		fcgi.out << "Last-Modified: #{stat.mtime.httpdate}\n"
 		fcgi.out << "Content-Length: #{content.size}\n\n"
 		fcgi.out << content
 	rescue Exception => e
