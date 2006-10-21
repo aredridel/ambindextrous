@@ -289,6 +289,7 @@ class Thumbnailer < FCGILet
 	end
 end
 
+errorcount = 0
 FCGI.each do |fcgi|
 	begin
 		Ambindextrous.new(fcgi).run
@@ -297,11 +298,15 @@ FCGI.each do |fcgi|
 			fcgi.out << "Status: 500\n"
 			fcgi.out << "Content-type: text/plain\n\n"
 			fcgi.out << "#{e} (#{e.class.name}): #{e.backtrace.join("\n")}"
+			errorcount += 1
 		rescue Exception => e
 			fcgi.finish
 		end
 	ensure
 		fcgi.finish
+	end
+	if errorcount > 5 
+		exit
 	end
 end
 	
