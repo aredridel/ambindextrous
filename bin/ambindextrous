@@ -245,7 +245,7 @@ class Ambindextrous < FCGILet
 					data[:entries] << entry
 				end
 			rescue Exception => x
-				LOGGER.debug x
+				LOGGER.debug x + " " + x.backtrace.join(", ")
 			end
 		end
 		if !do_images 

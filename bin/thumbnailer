@@ -24,7 +24,7 @@ FCGI.each do |fcgi|
 		fcgi.out << "Content-Length: #{content.size}\n\n"
 		fcgi.out << content
 	rescue Exception => e
-		fcgi.out << "Content-type: text/plain\n\nError #{e}"
+		fcgi.out << "Content-type: text/plain\n\nError #{e}\n#{e.backtrace.join("\n\t")}"
 	end
 	fcgi.finish
 	GC.start
