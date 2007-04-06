@@ -26,7 +26,7 @@ class Cacher
 		end
 	end
 	def mangle(filename)
-		md5 = Digest::MD5.new(filename).to_s
+		md5 = Digest::MD5.hexdigest(filename)
 		File.join(cachedir, md5)
 	end
 end
