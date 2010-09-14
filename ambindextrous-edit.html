@@ -1,14 +1,13 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 Strict//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<!DOCTYPE html>
+<html>
     <head>
-		 <!--		 <link rel="StyleSheet" href="http://pseudomammal.org/style/platypus-green" />-->
 		 <link rel="StyleSheet" href="/site.css" />
-		 <title>The Internet Company &#x2014; <span amrita:id='path'>/stuff</span></title>
+		 <title>Index of <%= path %></title>
     </head>
     <body>
-        <h1 amrita:id='path'>/stuff</h1>
+        <h1><%= path %></h1>
 		  <form method='POST' action='.'>
-			  <textarea name='text' amrita:id='text'>Stuff goes here</textarea>
+			  <textarea name='text'><%= text %></textarea>
 			  <input type='submit' value='Save' />
 		  </form>
     </body>
