@@ -12,7 +12,7 @@ class WebThumbnailer < Cacher
 	SIZE_NAMES = SIZES.invert
 
 	attr_accessor :x, :y, :sizename
-	CacheDirs = [File.join(ENV['HOME'] || '/tmp', '.thumbnails'), '/tmp/thumbnails']
+	CacheDirs = ['/var/cache/thumbnailer', File.join(ENV['HOME'] || '/tmp', '.thumbnails'), '/tmp/thumbnails']
 	def initialize(size)
 		if !/x/.match(size)
 			size = SIZES[size]

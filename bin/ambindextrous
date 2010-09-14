@@ -4,29 +4,18 @@ $:.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 
 require 'fcgi'
 require 'logger'
-require 'amrita/template'
-require 'xattr'
+require 'erb'
 require 'digest/md5'
 require 'uri'
 require 'cgi/pathmap'
 require 'cacher/webthumbnailer'
+require 'ostruct'
 
 LOGGER = Logger.new('/dev/null')
 
 class String
 	def urldecode
 		gsub(/%([0-F]{2})/) { $1.to_i(16).chr }
-	end
-end
-
-class XMLTemplateFile < Amrita::TemplateFile
-	def initialize(file)
-		super(file)
-		self.xml = true
-		self.asxml = true
-		self.expand_attr = true
-		self.amrita_id = 'amrita:id'
-		self.use_compiler = true
 	end
 end
 
@@ -60,7 +49,7 @@ class File
 						end
 					end
 				end
-				Amrita::SanitizedString.new [  # FIXME: this escaping is too simplistic
+				[ 
 					if dc > 0 
 						"#{dc} #{if dc > 1 then "directories" else "directory" end}," 
 					else 
@@ -133,16 +122,16 @@ class Ambindextrous < FCGILet
 		end
 		paths = [dir, docroot, File.join(File.dirname(__FILE__), '..')]
 		files = ['.ambindextrous.html', 'ambindextrous.html']
-		templatefile = paths.map { |e| files.map { |f| File.join(e, f) } }.flatten.select { |e| LOGGER.debug("Seeking #{e}."); t = File.exists? e; if t: LOGGER.debug('found'); end; t }.first
+		templatefile = paths.map { |e| files.map { |f| File.join(e, f) } }.flatten.select { |e| LOGGER.debug("Seeking #{e}."); t = File.exists? e; if t then LOGGER.debug('found'); end; t }.first
 
 		LOGGER.debug("templatefile = #{templatefile}")
-		self.template = XMLTemplateFile.new(templatefile)
+		self.template = ERB.new(File.read(templatefile))
 		if File.exists?(File.join(docroot, 'ambindextrous-edit.html'))
-			self.edittemplate = XMLTemplateFile.new(File.join(docroot, 'ambindextrous-edit.html'))
+			self.edittemplate = ERB.new(File.read(File.join(docroot, 'ambindextrous-edit.html')))
 		else
-			self.edittemplate = XMLTemplateFile.new('ambindextrous-edit.html')
+			self.edittemplate = ERB.new(File.read(File.join(File.dirname($0), '..', 'ambindextrous-edit.html')))
 		end
-		self.do_images = if File.read(templatefile).grep(/amrita:id=.images./): true  else false end
+		self.do_images = true
 	end
 
 	def log_errors
@@ -167,48 +156,17 @@ class Ambindextrous < FCGILet
 		end
 	end
 
-	def save_feedback
-		param_data = self.in.read(self.in.size)
-		param_data = param_data.split('&').map {|e| e.split('=')}
-		params = Hash.new { |h,k| h[k] = param_data.assoc(k)[1] }
-		if params['text']
-			File.set_attr(systempath, 'feedback', params['text'].formdecode)
-		end
-		out << "Status: 302\nLocation: #{path}\n\n"
-	end
-
 	def show_edit
-		begin
-			data = { :text => File.get_attr(systempath, 'feedback') , :path => path }
-		rescue Errno::EOPNOTSUPP => e
-			data = { :text => '', :path => path }
-		end
-		edittemplate.expand out, data
+		text = ''
+		out.puts(edittemplate.result(binding))
 	end
 
 	def show_listing
-		data = Hash.new
-		data[:path] = path
-		data[:images] = []
-		data[:entries] = []
+		images = []
+		entries = []
 
-		begin
-			a = File.get_attr systempath, 'feedback'
-		rescue Errno::EOPNOTSUPP => e
-			a = ''
-		rescue Errno::EPERM => e
-			a = ''
-		end
-
-		data[:feedback] = Amrita::SanitizedString.new(a.gsub("(.*)\n", '<p>\1</p>')) if a
-		begin
-			a = File.get_attr systempath, 'description'
-		rescue Errno::EOPNOTSUPP => e
-			a = ''
-		rescue Errno::EPERM => e
-			a = ''
-		end
-		data[:description] = Amrita::SanitizedString.new(a.gsub("\n", "<br />")) if a
+		feedback = ''
+		description = ''
 		Dir.open(systempath).each do |e|
 			begin 
 
@@ -228,47 +186,44 @@ class Ambindextrous < FCGILet
 
 				LOGGER.debug e.inspect
 
-				entry = {
-					:pathurl => Amrita::SanitizedString.new(e.urlencode),
-					:path => e, 
-					:extension => extension,
-					:description => (log_errors { File.get_attr(qp, 'description') } rescue ''),
-					:images => (log_errors { make_thumburls(File.images(qp), e) } rescue ""), 
-					:type => if s.directory? then '/' else '' end, 
-					:time => s.mtime.strftime('%e %b %y'), 
-					:size => File.contentsize(qp)
-				} 
+				entry = OpenStruct.new
+				entry.pathurl = e.urlencode
+				entry.path = e
+				entry.extension = extension
+				entry.description = ''
+				entry.images = (log_errors { make_thumburls(File.images(qp), e) } rescue "")
+				entry.type = if s.directory? then '/' else '' end
+				entry.time = s.mtime.strftime('%e %b %y')
+				entry.size = File.contentsize(qp)
 				if /[.](jpg|jpeg|gif|png|svg)/i =~ e
-					entry[:thumbnail] = '/global-site-overlay/ambindextrous/bin/thumbnailer/128x128' + File.join(self.url.path, e.urlencode)
-					data[:images] << entry
+					entry.thumbnail = '/global-site-overlay/ambindextrous/bin/thumbnailer/128x128' + File.join(self.url.path, e.urlencode)
+					images << entry
 				else
-					data[:entries] << entry
+					entries << entry
 				end
 			rescue Exception => x
 				LOGGER.debug x + " " + x.backtrace.join(", ")
 			end
 		end
 		if !do_images 
-			data[:entries] += data[:images]
+			entries += images
 		end
-		data[:images].sort! { |x,y| x[:path] <=> y[:path] }
-		data[:entries].sort! { |x,y| x[:path] <=> y[:path] }
-		LOGGER.debug { data[:images].inspect }
-		template.expand out, data
+		images.sort! { |x,y| x.path <=> y.path }
+		entries.sort! { |x,y| x.path <=> y.path }
+		LOGGER.debug { images.inspect }
+		out.puts(template.result(binding))
 	end
 
 	def make_thumburls(images, e)
-		Amrita::SanitizedString.new(
-			if images.empty? 
-				"" 
-			else 
-				images.map { |i| 
-					#f = File.join(File.basename(filename), i)
-					# FIXME: proper URL escaping
-					"<a href='#{File.join(e, i)}'><img src='#{File.join('/global-site-overlay/ambindextrous/bin/thumbnailer/32x24', self.url.path, e, i)}' alt='#{i}' title='#{i}' /></a>" 
-				}.join(' ')
-			end
-		)
+		if images.empty? 
+			"" 
+		else 
+			images.map { |i| 
+				#f = File.join(File.basename(filename), i)
+				# FIXME: proper URL escaping
+				"<a href='#{File.join(e, i)}'><img src='#{File.join('/global-site-overlay/ambindextrous/bin/thumbnailer/32x24', self.url.path, e, i)}' alt='#{i}' title='#{i}' /></a>" 
+			}.join(' ')
+		end
 	end
 end
 

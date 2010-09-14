@@ -10,7 +10,7 @@ class String
 		self.gsub('+', ' ').urldecode
 	end
 	def urlencode
-		self.gsub('%', '%25').gsub(' ', '%20').gsub('?', '%3F')
+		self.gsub('%', '%25').gsub(' ', '%20').gsub('?', '%3F').gsub("'", '%27').gsub('"', '%22')
 	end
 end
 
@@ -24,7 +24,7 @@ module WebDevHelper
 			path = env['REQUEST_URI'].split('?')[0].urldecode
 		end
 		if path =~ %r{/~([^/]+)}
-			docroot = File.join(Etc.getpwnam($1).dir, (if selfurl.host =~ /evil/: 'evil' else 'web' end))
+			docroot = File.join(Etc.getpwnam($1).dir, (if selfurl.host =~ /evil/ then 'evil' else 'web' end))
 		end
 		docroot
 	end
