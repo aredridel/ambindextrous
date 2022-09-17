@@ -218,29 +218,13 @@ class Ambindextrous < FCGILet
 		if images.empty? 
 			"" 
 		else 
+		  thumbnailer = WebThumbnailer.new("32x24");
 			images.map { |i| 
-				#f = File.join(File.basename(filename), i)
-				# FIXME: proper URL escaping
-				"<a href='#{File.join(e, i)}'><img src='#{File.join('/global-site-overlay/ambindextrous/bin/thumbnailer/32x24', self.url.path, e, i)}' alt='#{i}' title='#{i}' /></a>" 
+				f = File.join(File.basename(filename), i)
+				thumb = thumbnailer.thumbnail(f);
+				"<a href='#{File.join(e, i)}'><img src='data:image/jpeg;base64,#{Base64.encode(thumb)}' alt='#{i}' title='#{i}' /></a>" 
 			}.join(' ')
 		end
-	end
-end
-
-class Thumbnailer < FCGILet
-	attr_accessor :size
-	def initialize(fcgi, size)
-		self.size = size
-		super(fcgi)
-	end
-
-	def run(image)
-		cacher = WebThumbnailer.new(size)
-		file = File.join(systempath, image)
-		content = cacher.thumbnail(file)
-		out << "Content-type: image/jpeg\n"
-		out << "Content-Length: #{content.size}\n\n" 
-		out << content
 	end
 end
 
