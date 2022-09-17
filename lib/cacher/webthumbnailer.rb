@@ -1,6 +1,6 @@
 require 'cacher'
 require 'epeg'
-require 'RMagick'
+require 'rmagick'
 
 class WebThumbnailer < Cacher
 	SIZES = {

@@ -1,5 +1,5 @@
 require 'cacher'
-require 'RMagick'
+require 'rmagick'
 
 class FreedesktopThumbnailer < Cacher
 	SIZES = {

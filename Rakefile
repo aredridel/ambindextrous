@@ -1,5 +1,4 @@
 # Rakefile for project management (from chris2)  -*-ruby-*-
-require 'rake/rdoctask'
 require 'rake/testtask'
 
 desc "Run all the tests"
@@ -31,14 +30,6 @@ desc "Generate a ChangeLog"
 task :changelog do
   system "darcs changes --repo=#{ENV["DARCS_REPO"] || "."} >ChangeLog"
 end
-
-desc "Generate RDoc documentation"
-Rake::RDocTask.new(:doc) do |rdoc|
-  rdoc.options << '--line-numbers --inline-source'
-  rdoc.rdoc_dir = "rdoc"
-	rdoc.rdoc_files.include("lib/**/*.rb", "lib/*.rb")
-end 
-
 
 # Helper to retrieve the "revision number" of the darcs tree.
 def get_darcs_tree_version

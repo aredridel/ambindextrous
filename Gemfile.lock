@@ -1,0 +1,21 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    amrita2 (2.0.2)
+      hpricot (>= 0.6.0)
+    epeg (1.0.1)
+    fcgi (0.9.2.1)
+    hpricot (0.8.6)
+    rmagick (4.2.6)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  amrita2
+  epeg
+  fcgi
+  rmagick
+
+BUNDLED WITH
+   2.3.7
